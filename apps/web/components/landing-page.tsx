@@ -27,7 +27,8 @@ export function LandingPage() {
           brandName,
           companyName,
           email,
-          platforms
+          platforms,
+          tone: 'professionell und kundenorientiert'
         })
       });
 
@@ -73,11 +74,7 @@ export function LandingPage() {
             </p>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
-              {[
-                'Website analysieren',
-                'Inhalte generieren',
-                'Kampagne starten'
-              ].map((step) => (
+              {['Website analysieren', 'Inhalte generieren', 'Kampagne starten'].map((step) => (
                 <div key={step} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
                   <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-brand-500/20 text-sm font-semibold text-brand-200">
                     {step.charAt(0)}
@@ -149,14 +146,25 @@ export function LandingPage() {
                 {result.error ? (
                   <p className="text-red-400">{result.error}</p>
                 ) : (
-                  <div className="space-y-3">
-                    <p className="font-semibold text-brand-300">Kampagne erfolgreich generiert</p>
-                    <p>Website: {result.websiteUrl}</p>
-                    <p>Status: {result.status}</p>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-semibold text-brand-300">Kampagne erfolgreich generiert</p>
+                      <p className="mt-1 text-slate-400">Website: {result.websiteUrl}</p>
+                      <p className="text-slate-400">Status: {result.status}</p>
+                    </div>
+
+                    {result.insights && (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Insights</p>
+                        <p className="mt-2 text-slate-200">{result.insights.objective}</p>
+                      </div>
+                    )}
+
                     <div className="space-y-2 pt-2">
                       {result.posts?.map((post: any) => (
                         <div key={post.id} className="rounded-lg border border-slate-800 bg-slate-900 p-3">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{post.platform}</p>
+                          <p className="mt-2 font-medium text-white">{post.headline}</p>
                           <p className="mt-2 text-slate-200">{post.content}</p>
                         </div>
                       ))}
