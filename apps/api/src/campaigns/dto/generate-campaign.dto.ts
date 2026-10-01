@@ -1,7 +1,10 @@
-import { IsArray, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsArray } from 'class-validator';
 
 export class GenerateCampaignDto {
-  @IsUrl({}, { require_tld: false })
+  @IsString()
+  companyName: string;
+
+  @IsString()
   websiteUrl: string;
 
   @IsOptional()
@@ -10,18 +13,9 @@ export class GenerateCampaignDto {
 
   @IsOptional()
   @IsString()
-  companyName?: string;
-
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
   tone?: string;
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
   platforms?: string[];
 }

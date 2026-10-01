@@ -1,33 +1,35 @@
-import { Controller, Post, Get, Put, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt.guard';
 import { GenerateCampaignDto } from './dto/generate-campaign.dto';
 import { CampaignsService } from './campaigns.service';
 
 @Controller('campaigns')
+@UseGuards(JwtAuthGuard)
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 
   @Post('generate')
-  generate(@Body() dto: GenerateCampaignDto) {
-    return this.campaignsService.generate(dto);
+  async generate(@Request() req: any, @Body() dto: GenerateCampaignDto) {
+    return this.campaignsService.generate(req.user.sub, dto);
   }
 
   @Get()
-  getAll() {
-    return this.campaignsService.getAll();
+  async getAll(@Request() req: any) {
+    return this.campaignsService.getAll(req.user.sub);
   }
 
   @Get(':id')
-  getOne(@Param('id') id: string) {
-    return this.campaignsService.getOne(id);
+  async getOne(@Request() req: any, @Param('id') id: string) {
+    return this.campaignsService.getOne(req.user.sub, id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.campaignsService.update(id, dto);
+  async update(@Request() req: any, @Param('id') id: string, @Body() dto: any) {
+    return this.campaignsService.update(req.user.sub, id, dto);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.campaignsService.delete(id);
+  async delete(@Request() req: any, @Param('id') id: string) {
+    return this.campaignsService.delete(req.user.sub, id);
   }
 }

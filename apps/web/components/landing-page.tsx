@@ -1,49 +1,62 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const platforms = ['Instagram', 'LinkedIn', 'Facebook', 'X / Twitter'];
 
 export function LandingPage() {
+  const router = useRouter();
   const [websiteUrl, setWebsiteUrl] = useState('https://ihre-website.de');
   const [brandName, setBrandName] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('auth-token');
+    if (storedToken) {
+      setToken(storedToken);
+      setIsLoggedIn(true);
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
 
     try {
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/campaigns/generate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           websiteUrl,
           brandName,
           companyName,
-          email,
           platforms,
           tone: 'professionell und kundenorientiert'
         })
       });
 
       const data = await response.json();
-      setResult(data);
+      if (!response.ok) throw new Error(data.message || 'Fehler beim Generieren');
 
-      // Save to localStorage
-      const campaigns = JSON.parse(localStorage.getItem('campaigns') || '[]');
-      campaigns.push(data);
-      localStorage.setItem('campaigns', JSON.stringify(campaigns));
-    } catch (error) {
+      setResult(data);
+    } catch (error: any) {
       console.error(error);
       setResult({
-        error: 'Beim Generieren der Kampagne ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.'
+        error: error.message || 'Beim Generieren der Kampagne ist ein Fehler aufgetreten.'
       });
     } finally {
       setIsLoading(false);
@@ -61,9 +74,33 @@ export function LandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm text-slate-300 transition hover:text-white">
-              Dashboard
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link href="/dashboard" className="text-sm text-slate-300 transition hover:text-white">
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('auth-token');
+                    localStorage.removeItem('user');
+                    setIsLoggedIn(false);
+                    window.location.reload();
+                  }}
+                  className="text-sm text-slate-300 transition hover:text-white"
+                >
+                  Abmelden
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm text-slate-300 transition hover:text-white">
+                  Anmelden
+                </Link>
+                <Link href="/register" className="rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
+                  Registrieren
+                </Link>
+              </>
+            )}
             <div className="flex gap-4 text-sm text-slate-300">
               <span>DE</span>
               <span className="text-slate-500">|</span>
@@ -97,60 +134,62 @@ export function LandingPage() {
           </div>
 
           <div className="rounded-[28px] border border-slate-800 bg-slate-900 p-6 shadow-soft">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Name *</label>
-                <input
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none ring-0 placeholder:text-slate-500 focus:border-brand-500"
-                  placeholder="Ihr Name"
-                  required
-                />
+            {!isLoggedIn ? (
+              <div className="space-y-4 text-center">
+                <p className="text-slate-300">Bitte melden Sie sich an, um eine Kampagne zu erstellen</p>
+                <div className="flex gap-3">
+                  <Link href="/login" className="flex-1 rounded-xl bg-brand-500 px-5 py-3 font-semibold text-white transition hover:bg-brand-600">
+                    Anmelden
+                  </Link>
+                  <Link href="/register" className="flex-1 rounded-xl border border-brand-500 px-5 py-3 font-semibold text-brand-300 transition hover:bg-brand-500/10">
+                    Registrieren
+                  </Link>
+                </div>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Name *</label>
+                  <input
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none ring-0 placeholder:text-slate-500 focus:border-brand-500"
+                    placeholder="Ihr Name"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Unternehmen *</label>
-                <input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-brand-500"
-                  placeholder="Name Ihres Unternehmens"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Unternehmen *</label>
+                  <input
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-brand-500"
+                    placeholder="Name Ihres Unternehmens"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">E-Mail *</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-brand-500"
-                  placeholder="ihre@email.de"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm text-slate-300">Website *</label>
+                  <input
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-brand-500"
+                    placeholder="https://ihre-website.de"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Websites *</label>
-                <input
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-brand-500"
-                  placeholder="https://ihre-website.de"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full rounded-xl bg-brand-500 px-5 py-3 font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoading ? 'Kampagne wird erstellt...' : 'Jetzt Social Media Kampagne erstellen'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full rounded-xl bg-brand-500 px-5 py-3 font-semibold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLoading ? 'Kampagne wird erstellt...' : 'Jetzt Social Media Kampagne erstellen'}
+                </button>
+              </form>
+            )}
 
             {result && (
               <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-200">

@@ -1,25 +1,35 @@
 import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 import { GenerateCampaignDto } from './dto/generate-campaign.dto';
 
 @Injectable()
 export class CampaignsService {
-  private campaigns: any[] = [];
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService
+  ) {}
 
-  generate(dto: GenerateCampaignDto) {
-    const normalizedCompany = dto.companyName || 'Dein Unternehmen';
-    const normalizedBrand = dto.brandName || 'Your Brand';
-    const website = dto.websiteUrl || 'https://deine-website.de';
-    const tone = dto.tone || 'professionell und trust-building';
-
-    const insightSummary = {
-      company: normalizedCompany,
-      brand: normalizedBrand,
-      website,
+  generateInsights(companyName: string, websiteUrl: string, tone: string) {
+    return {
+      company: companyName,
+      website: websiteUrl,
       tone,
       audience: 'Unternehmen, Entscheidungsträger und potenzielle Kunden',
-      objective: 'Mehr Sichtbarkeit, Vertrauen und konvertierende Leads generieren'
+      objective: 'Mehr Sichtbarkeit, Vertrauen und konvertierende Leads generieren',
+      suggestedTopics: [
+        'Produkthighlights und USPs',
+        'Kundenerfolgsgeschichten',
+        'Branchentrends und Insights',
+        'Team und Unternehmenskultur',
+        'Tipps und Best Practices',
+        'Special Offers und Promotions',
+        'Customer Testimonials'
+      ]
     };
+  }
 
+  generatePosts(companyName: string, websiteUrl: string, tone: string, platforms: string[]) {
     const contentIdeas = [
       'Stelle dein Produkt oder deine Dienstleistung in einer klaren USP-Story vor und zeige den Mehrwert für Kunden.',
       'Teile einen "Behind the Scenes"-Einblick in deinen Prozess, dein Team und deine Werte.',
@@ -29,63 +39,70 @@ export class CampaignsService {
       'Nutze Kennzahlen, Statistiken und Erfolge als starke, glaubwürdige Content-Hooks.'
     ];
 
-    const posts = (dto.platforms || ['Instagram', 'LinkedIn', 'Facebook', 'X / Twitter']).map((platform, index) => {
-      const headline = `${normalizedCompany} – ${platform}`;
-      const body = `${contentIdeas[index % contentIdeas.length]}
+    return (platforms || ['Instagram', 'LinkedIn', 'Facebook']).map((platform, index) => ({
+      platform,
+      headline: `${companyName} – ${platform}`,
+      content: `${contentIdeas[index % contentIdeas.length]}
 
-Website: ${website}
-Key Message: ${insightSummary.objective}
+Website: ${websiteUrl}
 Tone: ${tone}
 
-Call to Action: Frage nach Mehr Informationen, kommentiere oder teile den Beitrag.
+#${companyName.replace(/\s+/g, '').toLowerCase()} #marketing #socialmedia #contentstrategy #brandgrowth`,
+      status: 'draft'
+    }));
+  }
 
-#${normalizedCompany.replace(/\s+/g, '').toLowerCase()} #marketing #socialmedia #contentstrategy #brandgrowth`;
+  async generate(userId: string, dto: GenerateCampaignDto) {
+    const insights = this.generateInsights(dto.companyName, dto.websiteUrl, dto.tone || 'professionell');
+    const postsData = this.generatePosts(dto.companyName, dto.websiteUrl, dto.tone || 'professionell', dto.platforms);
 
-      return {
-        id: `${platform.toLowerCase().replace(/\s+/g, '-')}-${index + 1}`,
-        platform,
-        headline,
-        content: body,
-        status: 'draft'
-      };
+    const campaign = await this.prisma.campaign.create({
+      data: {
+        userId,
+        websiteUrl: dto.websiteUrl,
+        companyName: dto.companyName,
+        brandName: dto.brandName,
+        tone: dto.tone || 'professionell',
+        insights,
+        posts: {
+          create: postsData
+        }
+      },
+      include: {
+        posts: true
+      }
     });
 
-    const campaign = {
-      id: `campaign-${Date.now()}`,
-      websiteUrl: website,
-      status: 'generated',
-      brandName: normalizedBrand,
-      companyName: normalizedCompany,
-      createdAt: new Date().toISOString(),
-      insights: insightSummary,
-      posts
-    };
-
-    this.campaigns.push(campaign);
     return campaign;
   }
 
-  getAll() {
-    return this.campaigns;
+  async getAll(userId: string) {
+    return this.prisma.campaign.findMany({
+      where: { userId },
+      include: { posts: true },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
-  getOne(id: string) {
-    return this.campaigns.find(c => c.id === id);
+  async getOne(userId: string, campaignId: string) {
+    return this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { posts: true }
+    });
   }
 
-  update(id: string, dto: any) {
-    const campaign = this.campaigns.find(c => c.id === id);
-    if (campaign) {
-      Object.assign(campaign, dto);
-    }
-    return campaign;
+  async update(userId: string, campaignId: string, dto: any) {
+    return this.prisma.campaign.update({
+      where: { id: campaignId },
+      data: dto,
+      include: { posts: true }
+    });
   }
 
-  delete(id: string) {
-    const index = this.campaigns.findIndex(c => c.id === id);
-    if (index > -1) {
-      this.campaigns.splice(index, 1);
-    }
+  async delete(userId: string, campaignId: string) {
+    await this.prisma.campaign.delete({
+      where: { id: campaignId }
+    });
     return { success: true };
   }
 }
