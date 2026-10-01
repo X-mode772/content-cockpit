@@ -4,35 +4,58 @@ import { GenerateCampaignDto } from './dto/generate-campaign.dto';
 @Injectable()
 export class CampaignsService {
   generate(dto: GenerateCampaignDto) {
-    const content = [
-      'Produkt-Highlight: Zeige dein Angebot mit klaren USPs und einer starken Call-to-Action.',
-      'Behind the scenes: Teile den Prozess, das Team und die Werte deines Unternehmens.',
-      'Customer proof: Veröffentliche ein kurzes Testimonial oder Erfahrungsbild.',
-      'Content-Upgrade: Biete ein gratis PDF, Checklist oder Mini-Guide an.',
-      'Fokus auf Mehrwert: Erkläre in 3 Punkten, wie Kunden von deinem Angebot profitieren.',
-      'Social proof: Nutze Statistiken, Erfolge oder Kennzahlen als Reels/Post-Content.',
-      'Kampagnen-CTA: Fordere Kommentare, Shares oder Direktanfragen mit klarer CTA an.'
+    const normalizedCompany = dto.companyName || 'Dein Unternehmen';
+    const normalizedBrand = dto.brandName || 'Your Brand';
+    const website = dto.websiteUrl || 'https://deine-website.de';
+    const tone = dto.tone || 'professionell und trust-building';
+
+    const insightSummary = {
+      company: normalizedCompany,
+      brand: normalizedBrand,
+      website,
+      tone,
+      audience: 'Unternehmen, Entscheidungsträger und potenzielle Kunden',
+      objective: 'Mehr Sichtbarkeit, Vertrauen und konvertierende Leads generieren'
+    };
+
+    const contentIdeas = [
+      'Stelle dein Produkt oder deine Dienstleistung in einer klaren USP-Story vor und zeige den Mehrwert für Kunden.',
+      'Teile einen "Behind the Scenes"-Einblick in deinen Prozess, dein Team und deine Werte.',
+      'Veröffentliche ein Kunden-Feedback oder eine erfolgreiche Fallstudie als social proof.',
+      'Biete ein kostenloses Lead-Magnet oder Mini-Guide an, um Qualifikations- und Anfragen zu erhöhen.',
+      'Erkläre in 3 kurzen Punkten, warum Kunden genau bei dir statt bei der Konkurrenz wählen.',
+      'Nutze Kennzahlen, Statistiken und Erfolge als starke, glaubwürdige Content-Hooks.'
     ];
 
-    const posts = (dto.platforms || ['Instagram', 'LinkedIn', 'Facebook']).map((platform, index) => ({
-      id: `${platform.toLowerCase().replace(/\s+/g, '-')}-${index + 1}`,
-      platform,
-      content: `🚀 ${dto.companyName || 'Dein Unternehmen'} präsentiert: ${content[index % content.length]}
+    const posts = (dto.platforms || ['Instagram', 'LinkedIn', 'Facebook', 'X / Twitter']).map((platform, index) => {
+      const headline = `${normalizedCompany} – ${platform}`;
+      const body = `${contentIdeas[index % contentIdeas.length]}
 
-Website: ${dto.websiteUrl}
-Tone: ${dto.tone || 'professionell'}
+Website: ${website}
+Key Message: ${insightSummary.objective}
+Tone: ${tone}
 
-#${(dto.companyName || 'Business').replace(/\s+/g, '').toLowerCase()} #marketing #socialmedia #growth #contentstrategy`
-` 
-    }));
+Call to Action: Frage nach Mehr Informationen, kommentiere oder teile den Beitrag.
+
+#${normalizedCompany.replace(/\s+/g, '').toLowerCase()} #marketing #socialmedia #contentstrategy #brandgrowth`;
+
+      return {
+        id: `${platform.toLowerCase().replace(/\s+/g, '-')}-${index + 1}`,
+        platform,
+        headline,
+        content: body,
+        status: 'draft'
+      };
+    });
 
     return {
       id: `campaign-${Date.now()}`,
-      websiteUrl: dto.websiteUrl,
+      websiteUrl: website,
       status: 'generated',
-      brandName: dto.brandName || 'Neues Team',
-      companyName: dto.companyName || 'Dein Unternehmen',
+      brandName: normalizedBrand,
+      companyName: normalizedCompany,
       createdAt: new Date().toISOString(),
+      insights: insightSummary,
       posts
     };
   }
