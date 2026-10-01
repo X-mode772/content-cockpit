@@ -3,6 +3,8 @@ import { GenerateCampaignDto } from './dto/generate-campaign.dto';
 
 @Injectable()
 export class CampaignsService {
+  private campaigns: any[] = [];
+
   generate(dto: GenerateCampaignDto) {
     const normalizedCompany = dto.companyName || 'Dein Unternehmen';
     const normalizedBrand = dto.brandName || 'Your Brand';
@@ -48,7 +50,7 @@ Call to Action: Frage nach Mehr Informationen, kommentiere oder teile den Beitra
       };
     });
 
-    return {
+    const campaign = {
       id: `campaign-${Date.now()}`,
       websiteUrl: website,
       status: 'generated',
@@ -58,5 +60,32 @@ Call to Action: Frage nach Mehr Informationen, kommentiere oder teile den Beitra
       insights: insightSummary,
       posts
     };
+
+    this.campaigns.push(campaign);
+    return campaign;
+  }
+
+  getAll() {
+    return this.campaigns;
+  }
+
+  getOne(id: string) {
+    return this.campaigns.find(c => c.id === id);
+  }
+
+  update(id: string, dto: any) {
+    const campaign = this.campaigns.find(c => c.id === id);
+    if (campaign) {
+      Object.assign(campaign, dto);
+    }
+    return campaign;
+  }
+
+  delete(id: string) {
+    const index = this.campaigns.findIndex(c => c.id === id);
+    if (index > -1) {
+      this.campaigns.splice(index, 1);
+    }
+    return { success: true };
   }
 }

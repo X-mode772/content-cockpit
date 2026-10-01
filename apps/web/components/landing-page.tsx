@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import Link from 'next/link';
 
 const platforms = ['Instagram', 'LinkedIn', 'Facebook', 'X / Twitter'];
 
@@ -34,6 +35,11 @@ export function LandingPage() {
 
       const data = await response.json();
       setResult(data);
+
+      // Save to localStorage
+      const campaigns = JSON.parse(localStorage.getItem('campaigns') || '[]');
+      campaigns.push(data);
+      localStorage.setItem('campaigns', JSON.stringify(campaigns));
     } catch (error) {
       console.error(error);
       setResult({
@@ -54,10 +60,15 @@ export function LandingPage() {
               <p className="text-xl font-semibold">Content Cockpit</p>
             </div>
           </div>
-          <div className="flex gap-4 text-sm text-slate-300">
-            <span>DE</span>
-            <span className="text-slate-500">|</span>
-            <span>EN</span>
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard" className="text-sm text-slate-300 transition hover:text-white">
+              Dashboard
+            </Link>
+            <div className="flex gap-4 text-sm text-slate-300">
+              <span>DE</span>
+              <span className="text-slate-500">|</span>
+              <span>EN</span>
+            </div>
           </div>
         </div>
 
@@ -148,14 +159,14 @@ export function LandingPage() {
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <p className="font-semibold text-brand-300">Kampagne erfolgreich generiert</p>
+                      <p className="font-semibold text-brand-300">✓ Kampagne erfolgreich generiert</p>
                       <p className="mt-1 text-slate-400">Website: {result.websiteUrl}</p>
                       <p className="text-slate-400">Status: {result.status}</p>
                     </div>
 
                     {result.insights && (
                       <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Insights</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Kampagnen Insights</p>
                         <p className="mt-2 text-slate-200">{result.insights.objective}</p>
                       </div>
                     )}
@@ -165,10 +176,17 @@ export function LandingPage() {
                         <div key={post.id} className="rounded-lg border border-slate-800 bg-slate-900 p-3">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{post.platform}</p>
                           <p className="mt-2 font-medium text-white">{post.headline}</p>
-                          <p className="mt-2 text-slate-200">{post.content}</p>
+                          <p className="mt-2 line-clamp-2 text-slate-200">{post.content}</p>
                         </div>
                       ))}
                     </div>
+
+                    <Link
+                      href="/dashboard"
+                      className="mt-4 block rounded-lg bg-brand-500 px-4 py-2 text-center font-medium text-white transition hover:bg-brand-600"
+                    >
+                      Im Dashboard ansehen
+                    </Link>
                   </div>
                 )}
               </div>
