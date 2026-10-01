@@ -2,60 +2,34 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateCampaignDto } from './dto/generate-campaign.dto';
+import { WebsiteAnalyzerService } from '../website-analyzer/website-analyzer.service';
+import { AIContentEngine } from '../ai-content/ai-content.engine';
 
 @Injectable()
 export class CampaignsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly websiteAnalyzer: WebsiteAnalyzerService,
+    private readonly aiEngine: AIContentEngine
   ) {}
 
-  generateInsights(companyName: string, websiteUrl: string, tone: string) {
-    return {
-      company: companyName,
-      website: websiteUrl,
-      tone,
-      audience: 'Unternehmen, Entscheidungsträger und potenzielle Kunden',
-      objective: 'Mehr Sichtbarkeit, Vertrauen und konvertierende Leads generieren',
-      suggestedTopics: [
-        'Produkthighlights und USPs',
-        'Kundenerfolgsgeschichten',
-        'Branchentrends und Insights',
-        'Team und Unternehmenskultur',
-        'Tipps und Best Practices',
-        'Special Offers und Promotions',
-        'Customer Testimonials'
-      ]
-    };
-  }
-
-  generatePosts(companyName: string, websiteUrl: string, tone: string, platforms: string[]) {
-    const contentIdeas = [
-      'Stelle dein Produkt oder deine Dienstleistung in einer klaren USP-Story vor und zeige den Mehrwert für Kunden.',
-      'Teile einen "Behind the Scenes"-Einblick in deinen Prozess, dein Team und deine Werte.',
-      'Veröffentliche ein Kunden-Feedback oder eine erfolgreiche Fallstudie als social proof.',
-      'Biete ein kostenloses Lead-Magnet oder Mini-Guide an, um Qualifikations- und Anfragen zu erhöhen.',
-      'Erkläre in 3 kurzen Punkten, warum Kunden genau bei dir statt bei der Konkurrenz wählen.',
-      'Nutze Kennzahlen, Statistiken und Erfolge als starke, glaubwürdige Content-Hooks.'
-    ];
-
-    return (platforms || ['Instagram', 'LinkedIn', 'Facebook']).map((platform, index) => ({
-      platform,
-      headline: `${companyName} – ${platform}`,
-      content: `${contentIdeas[index % contentIdeas.length]}
-
-Website: ${websiteUrl}
-Tone: ${tone}
-
-#${companyName.replace(/\s+/g, '').toLowerCase()} #marketing #socialmedia #contentstrategy #brandgrowth`,
-      status: 'draft'
-    }));
-  }
-
   async generate(userId: string, dto: GenerateCampaignDto) {
-    const insights = this.generateInsights(dto.companyName, dto.websiteUrl, dto.tone || 'professionell');
-    const postsData = this.generatePosts(dto.companyName, dto.websiteUrl, dto.tone || 'professionell', dto.platforms);
+    // Analyze website
+    const analysis = await this.websiteAnalyzer.analyzeWebsite(dto.websiteUrl);
 
+    // Generate insights
+    const insights = this.aiEngine.generateCampaignInsights(analysis, dto.companyName);
+
+    // Generate 7-day content plan
+    const posts = this.aiEngine.generateSevenDayPlan(
+      dto.companyName,
+      analysis,
+      dto.tone || 'professionell',
+      dto.platforms || ['Instagram', 'LinkedIn', 'Facebook']
+    );
+
+    // Create campaign with posts
     const campaign = await this.prisma.campaign.create({
       data: {
         userId,
@@ -65,7 +39,12 @@ Tone: ${tone}
         tone: dto.tone || 'professionell',
         insights,
         posts: {
-          create: postsData
+          create: posts.map(post => ({
+            platform: post.platform,
+            headline: post.headline,
+            content: `${post.content}\n\n${post.hashtags.join(' ')}\n\n${post.cta}`,
+            status: 'draft'
+          }))
         }
       },
       include: {

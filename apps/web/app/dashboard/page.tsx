@@ -10,6 +10,7 @@ interface Campaign {
   status: string;
   createdAt: string;
   posts: any[];
+  insights: any;
 }
 
 export default function DashboardPage() {
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<any>(null);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('auth-token');
@@ -81,8 +83,15 @@ Website: ${campaign.websiteUrl}
 Status: ${campaign.status}
 Created: ${new Date(campaign.createdAt).toLocaleDateString('de-DE')}
 
---- POSTS ---
-${campaign.posts?.map(post => `[${post.platform}]\nHeadline: ${post.headline}\nContent: ${post.content}\n`).join('\n')}`;
+--- CAMPAIGN INSIGHTS ---
+${JSON.stringify(campaign.insights, null, 2)}
+
+--- POSTS (7 TAGE) ---
+${campaign.posts?.map((post, idx) => `
+Day ${Math.ceil((idx + 1) / 4)}
+[${post.platform}]
+Headline: ${post.headline}
+Content: ${post.content}`).join('\n')}`;
 
     const element = document.createElement('a');
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
@@ -169,15 +178,34 @@ ${campaign.posts?.map(post => `[${post.platform}]\nHeadline: ${post.headline}\nC
                     </div>
                   </div>
 
+                  {/* Insights */}
+                  {selectedCampaign.insights && (
+                    <div className="rounded-xl border border-slate-700 bg-slate-800 p-4">
+                      <h3 className="mb-2 font-semibold text-brand-300">Kampagnen-Insights</h3>
+                      <div className="space-y-2 text-sm text-slate-300">
+                        <p><strong>Zielgruppe:</strong> {selectedCampaign.insights.audience}</p>
+                        <p><strong>Hauptthema:</strong> {selectedCampaign.insights.mainTopic}</p>
+                        <p><strong>Ziel:</strong> {selectedCampaign.insights.objective}</p>
+                        {selectedCampaign.insights.keywords?.length > 0 && (
+                          <p><strong>Keywords:</strong> {selectedCampaign.insights.keywords.slice(0, 5).join(', ')}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Posts */}
                   <div>
-                    <h3 className="mb-3 font-semibold">Posts ({selectedCampaign.posts?.length || 0})</h3>
-                    <div className="space-y-3">
+                    <h3 className="mb-3 font-semibold">Posts - 7 Tage Plan ({selectedCampaign.posts?.length || 0})</h3>
+                    <div className="max-h-96 space-y-3 overflow-y-auto">
                       {selectedCampaign.posts?.map((post, idx) => (
                         <div key={idx} className="rounded-lg border border-slate-700 bg-slate-800 p-3">
-                          <p className="text-xs uppercase tracking-widest text-brand-300">{post.platform}</p>
-                          <p className="mt-2 font-medium text-white">{post.headline}</p>
-                          <p className="mt-2 line-clamp-3 text-sm text-slate-300">{post.content}</p>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-xs uppercase tracking-widest text-brand-300">{post.platform} • Tag {Math.ceil((idx + 1) / 4)}</p>
+                              <p className="mt-2 font-medium text-white">{post.headline}</p>
+                              <p className="mt-2 line-clamp-2 text-sm text-slate-300">{post.content}</p>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
